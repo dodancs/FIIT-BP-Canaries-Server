@@ -1,0 +1,18 @@
+{
+    "canary": {
+        "db_host": "host",
+        "db_port": 3306,
+        "db_user": "user",
+        "db_password": "password",
+        "db_db": "database",
+        "db_charset": "utf8mb4"
+    },
+    "mail": {
+        "db_host": "host",
+        "db_port": 3306,
+        "db_user": "user",
+        "db_password": "password",
+        "db_db": "database",
+        "db_charset": "utf8mb4"
+    }
+}
