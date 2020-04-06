@@ -21,7 +21,9 @@ def log(message):
 
 def printHelp():
     print(
-        'Please run sync.py with a parameter:\n~$ python3 ./sync.py {parameter}\n\t-s\tSetup basic server environment\n\t-d\tRun in daemon mode - automatically check and sync canaries')
+        'Please run sync.py with a parameter:\n~$ python3 ./sync.py {parameter}\n\
+            \t-s\tSetup basic server environment\n\
+            \t-d\tRun in daemon mode - automatically check and sync canaries')
     exit(1)
 
 
