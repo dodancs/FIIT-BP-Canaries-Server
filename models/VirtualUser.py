@@ -5,10 +5,12 @@ from models.VirtualDomain import VirtualDomain
 
 
 class VirtualUser(BaseModel):
-    id = peewee.BigAutoField(unique=True, index=True, primary_key=True)
-    domain_id = peewee.ForeignKeyField(VirtualDomain, backref='aliases')
-    password = peewee.CharField(max_length=255)
-    email = peewee.CharField(unique=True, max_length=255)
+    id = peewee.BigAutoField(unique=True, index=True,
+                             primary_key=True, null=False)
+    domain_id = peewee.ForeignKeyField(
+        VirtualDomain, backref='aliases', null=False, on_delete='CASCADE')
+    password = peewee.CharField(max_length=255, null=False)
+    email = peewee.CharField(unique=True, max_length=255, null=False)
 
     class Meta:
         table_name = 'virtual_aliases'

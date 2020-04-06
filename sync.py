@@ -4,6 +4,9 @@ import sched
 import time
 import sys
 
+from models.BaseModelMail import db as mail_db
+from models.BaseModelCanaries import db as canary_db
+
 debug = True
 
 ###############
@@ -29,6 +32,21 @@ def printHelp():
 
 def setup():
     log('Setup time!')
+    print(
+        'Please check your configuration. Are you sure to continue? [y/N] ', end='')
+    if str(input()).lower() in ('y', 'yes'):
+        print('Creating model tables for Canaries Server')
+        try:
+            mail_db.connect()
+            mail_db.create_tables(
+                [models.VirtualAlias, models.VirtualDomain, models.VirtualUser])
+            mail_db.close()
+        except Exception as e:
+            print('An error occured while creating tables!')
+            log(e)
+        log('Done')
+    else:
+        exit
 
 
 ##############
