@@ -8,9 +8,9 @@ class VirtualUser(BaseModel):
     id = peewee.BigAutoField(unique=True, index=True,
                              primary_key=True, null=False)
     domain_id = peewee.ForeignKeyField(
-        VirtualDomain, backref='aliases', null=False, on_delete='CASCADE')
+        VirtualDomain, backref='users', null=False, on_delete='CASCADE')
     password = peewee.CharField(max_length=255, null=False)
     email = peewee.CharField(unique=True, max_length=255, null=False)
 
     class Meta:
-        table_name = 'virtual_aliases'
+        table_name = 'virtual_users'
