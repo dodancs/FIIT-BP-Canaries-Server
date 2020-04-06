@@ -44,7 +44,7 @@ def setup():
         except Exception as e:
             print('An error occured while creating tables!')
             log(e)
-        log('Done')
+        print('Done.')
     else:
         exit
 
