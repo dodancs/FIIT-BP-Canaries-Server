@@ -81,7 +81,8 @@ def setup():
     print('Creating database model tables for Canary Server...')
     log('Connecting to Canary Server database...')
     try:
-        mail_db.connect()
+        if mail_db.is_closed():
+            mail_db.connect()
         log('Creating tables for VirtualAlias, VirtualDomain & VirtualUser...')
         mail_db.create_tables(
             [models.VirtualAlias, models.VirtualDomain, models.VirtualUser])
@@ -123,7 +124,8 @@ def setup():
         print('Pulling domain configuration from backend...')
         log('Connecting to Canary Backend database...')
         try:
-            canary_db.connect()
+            if canary_db.is_closed():
+                canary_db.connect()
             log('Getting domain configuration...')
             domains = models.Domain.select()
         except Exception as e:
@@ -175,7 +177,8 @@ def setup():
             print('Pulling domain configuration from backend...')
             log('Connecting to Canary Backend database...')
             try:
-                canary_db.connect()
+                if canary_db.is_closed():
+                    canary_db.connect()
                 log('Getting domain configuration...')
                 domains = models.Domain.select()
             except Exception as e:
@@ -194,7 +197,8 @@ def setup():
         print('Adding virtual domains...')
         log('Connecting to Canary Server database...')
         try:
-            mail_db.connect()
+            if mail_db.is_closed():
+                mail_db.connect()
 
             for domain in domains:
                 try:
@@ -226,7 +230,8 @@ def setup():
         print('Pulling canary configuration from backend...')
         log('Connecting to Canary Backend database...')
         try:
-            canary_db.connect()
+            if canary_db.is_closed():
+                canary_db.connect()
             log('Getting canary accounts...')
             canaries = models.Canary.select()
         except Exception as e:
@@ -245,7 +250,8 @@ def setup():
         print('Adding virtual users...')
         log('Connecting to Canary Server database...')
         try:
-            mail_db.connect()
+            if mail_db.is_closed():
+                mail_db.connect()
 
             for canary in canaries:
                 try:
