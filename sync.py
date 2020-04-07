@@ -7,6 +7,8 @@ from termcolor import colored, cprint
 import os
 import getpass
 import json
+from crypt import crypt
+from hashlib import sha1
 
 from models.BaseModelMail import db as mail_db
 from models.BaseModelCanaries import db as canary_db
@@ -242,15 +244,9 @@ def setup():
 
             for canary in canaries:
                 try:
-                    cursor = mail_db.execute_sql('INSERT INTO `%s`.`virtual_users`\
-                                        (`domain_id`, `password`, `email`)\
-                                        VALUES\
-                                        (%s, ENCRYPT(\'%s\', CONCAT(\'$6$\', SUBSTRING(\
-                                            SHA(RAND()), -16))), \'%s\'' % (Config['mail']['db_db'], domain_mapping[canary.domain], canary.password, canary.email))
-                    # u = models.VirtualUser(
-                    # domain_id=domain_mapping[canary.domain], email=canary.email, password=canary.password)
-                    # u.save()
-                    print(cursor.fetchone())
+                    u = models.VirtualUser(
+                        domain_id=domain_mapping[canary.domain], email=canary.email, password=crypt(canary.password, '$6$%s' % str(sha1(os.urandom(32)).hexdigest())[0:16]))
+                    u.save()
                     log('Adding %s' % canary.email)
                 except peewee.IntegrityError:
                     log('Skipping %s - already exists' % canary.email)
