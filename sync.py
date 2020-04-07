@@ -6,6 +6,7 @@ import sys
 from termcolor import colored, cprint
 import os
 import getpass
+import json
 
 from models.BaseModelMail import db as mail_db
 from models.BaseModelCanaries import db as canary_db
@@ -42,6 +43,11 @@ def printHelp():
 def setup():
     log('Setup time!')
 
+    # Open configuration file
+    try:
+        with open('config.json', encoding='utf8') as config_file:
+            Config = json.load(config_file)
+
     #
     # Check if the script is ran by root
     #
@@ -72,12 +78,13 @@ def setup():
         log('Creating tables for VirtualAlias, VirtualDomain & VirtualUser...')
         mail_db.create_tables(
             [models.VirtualAlias, models.VirtualDomain, models.VirtualUser])
-        mail_db.close()
-        log('Connection closed.')
     except Exception as e:
         error('An error occured while creating tables!')
         log(e)
         exit(1)
+    finally:
+        mail_db.close()
+        log('Connection closed.')
     print('Done.')
 
     #
@@ -112,12 +119,13 @@ def setup():
             canary_db.connect()
             log('Getting domain configuration...')
             domains = models.Domain.select()
-            canary_db.close()
-            log('Connection closed.')
         except Exception as e:
             error('An error occured while getting data!')
             log(e)
             exit(1)
+        finally:
+            canary_db.close()
+            log('Connection closed.')
         print('Done.')
 
         #
@@ -163,12 +171,13 @@ def setup():
                 canary_db.connect()
                 log('Getting domain configuration...')
                 domains = models.Domain.select()
-                canary_db.close()
-                log('Connection closed.')
             except Exception as e:
                 error('An error occured while getting domains!')
                 log(e)
                 exit(1)
+            finally:
+                canary_db.close()
+                log('Connection closed.')
             print('Done.')
 
         #
@@ -188,16 +197,19 @@ def setup():
                     domain_mapping[domain.uuid] = d.id
                 except peewee.IntegrityError:
                     log('Skipping %s - already exists' % domain.domain)
+                    d = models.VirtualDomain.get(
+                        models.VirtualDomain.name == domain.domain)
+                    domain_mapping[domain.uuid] = d.id
                     pass
                 except:
                     raise
-
-            mail_db.close()
-            log('Connection closed.')
         except Exception as e:
             error('An error occured while adding virtual domains!')
             log(e)
             exit(1)
+        finally:
+            mail_db.close()
+            log('Connection closed.')
         print('Done.')
 
         #
@@ -210,12 +222,13 @@ def setup():
             canary_db.connect()
             log('Getting canary accounts...')
             canaries = models.Canary.select()
-            canary_db.close()
-            log('Connection closed.')
         except Exception as e:
             error('An error occured while getting canaries!')
             log(e)
             exit(1)
+        finally:
+            canary_db.close()
+            log('Connection closed.')
         print('Done.')
 
         #
@@ -229,9 +242,15 @@ def setup():
 
             for canary in canaries:
                 try:
-                    u = models.VirtualUser(
-                        domain_id=domain_mapping[canary.domain], email=canary.email, password=canary.password)
-                    u.save()
+                    cursor = mail_db.execute_sql('INSERT INTO `%s`.`virtual_users`\
+                                        (`domain_id`, `password`, `email`)\
+                                        VALUES\
+                                        (%s, ENCRYPT(\'%s\', CONCAT(\'$6$\', SUBSTRING(\
+                                            SHA(RAND()), -16))), \'%s\'' % (Config['mail']['db_db'], domain_mapping[canary.domain], canary.password, canary.email))
+                    # u = models.VirtualUser(
+                    # domain_id=domain_mapping[canary.domain], email=canary.email, password=canary.password)
+                    # u.save()
+                    print(cursor.fetchone())
                     log('Adding %s' % canary.email)
                 except peewee.IntegrityError:
                     log('Skipping %s - already exists' % canary.email)
@@ -239,12 +258,13 @@ def setup():
                 except:
                     raise
 
-            mail_db.close()
-            log('Connection closed.')
         except Exception as e:
             error('An error occured while adding virtual domains!')
             log(e)
             exit(1)
+        finally:
+            mail_db.close()
+            log('Connection closed.')
         print('Done.')
 
     print('Configuration finished!')
