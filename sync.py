@@ -26,8 +26,11 @@ def log(message):
         cprint('[DEBUG]: %s' % message, 'yellow')
 
 
-def error(message):
-    cprint('[ERROR]: %s' % message, 'white', 'on_red')
+def error(message, color=False):
+    if color:
+        cprint('[ERROR]: %s' % message, 'white', 'on_red')
+    else:
+        print('[ERROR]: %s' % message, file=sys.stderr)
 
 
 def printHelp():
@@ -51,9 +54,9 @@ def setup():
         with open('config.json', encoding='utf8') as config_file:
             Config = json.load(config_file)
     except:
-        print('Unable to open config.json!')
-        print('If you haven\'t created a configuration file, please use the example configuration file as a guide.')
-        print('Otherwise, make sure the file permissions are set correctly.')
+        error('Unable to open config.json!\n\
+            If you haven\'t created a configuration file, please use the example configuration file as a guide.\n\
+            Otherwise, make sure the file permissions are set correctly.', Trues)
         exit(1)
 
     #
@@ -61,7 +64,7 @@ def setup():
     #
     if getpass.getuser() != 'root':
         error('Please run the script as root! Current user: %s' %
-              getpass.getuser())
+              getpass.getuser(), True)
         exit(1)
 
     #
@@ -80,15 +83,15 @@ def setup():
     #
 
     print('Creating database model tables for Canary Server...')
-    log('Connecting to Canary Server database...')
     try:
         if mail_db.is_closed():
+            log('Connecting to Canary Server database...')
             mail_db.connect()
         log('Creating tables for VirtualAlias, VirtualDomain & VirtualUser...')
         mail_db.create_tables(
             [models.VirtualAlias, models.VirtualDomain, models.VirtualUser])
     except Exception as e:
-        error('An error occured while creating tables!')
+        error('An error occured while creating tables!', True)
         log(e)
         exit(1)
     finally:
@@ -101,7 +104,8 @@ def setup():
     #
 
     if sys.platform != "linux" and sys.platform != "linux2":
-        error('Rest of the configuration is not designed for Windows operating systems!')
+        error(
+            'Rest of the configuration is not designed for Windows operating systems!', True)
         exit(1)
 
     #
@@ -123,14 +127,14 @@ def setup():
         #
 
         print('Pulling domain configuration from backend...')
-        log('Connecting to Canary Backend database...')
         try:
             if canary_db.is_closed():
+                log('Connecting to Canary Backend database...')
                 canary_db.connect()
             log('Getting domain configuration...')
             domains = models.Domain.select()
         except Exception as e:
-            error('An error occured while getting data!')
+            error('An error occured while getting data!', True)
             log(e)
             exit(1)
         finally:
@@ -158,7 +162,7 @@ def setup():
                     os.makedirs(path, mode=0o770, exist_ok=True)
                     os.chown(path, uid, gid)
         except Exception as e:
-            error('An error occured while creating folders!')
+            error('An error occured while creating folders!', True)
             log(e)
             exit(1)
 
@@ -178,18 +182,19 @@ def setup():
         # Get all domains from backend
         #
 
+        # domain to uuid mapping
         domain_mapping = dict()
 
         if not domains:
             print('Pulling domain configuration from backend...')
-            log('Connecting to Canary Backend database...')
             try:
                 if canary_db.is_closed():
+                    log('Connecting to Canary Backend database...')
                     canary_db.connect()
                 log('Getting domain configuration...')
                 domains = models.Domain.select()
             except Exception as e:
-                error('An error occured while getting domains!')
+                error('An error occured while getting domains!', True)
                 log(e)
                 exit(1)
             finally:
@@ -202,9 +207,9 @@ def setup():
         #
 
         print('Adding virtual domains...')
-        log('Connecting to Canary Server database...')
         try:
             if mail_db.is_closed():
+                log('Connecting to Canary Server database...')
                 mail_db.connect()
 
             for domain in domains:
@@ -222,7 +227,7 @@ def setup():
                 except:
                     raise
         except Exception as e:
-            error('An error occured while adding virtual domains!')
+            error('An error occured while adding virtual domains!', True)
             log(e)
             exit(1)
         finally:
@@ -235,14 +240,14 @@ def setup():
         #
 
         print('Pulling canary configuration from backend...')
-        log('Connecting to Canary Backend database...')
         try:
             if canary_db.is_closed():
+                log('Connecting to Canary Backend database...')
                 canary_db.connect()
             log('Getting canary accounts...')
             canaries = models.Canary.select()
         except Exception as e:
-            error('An error occured while getting canaries!')
+            error('An error occured while getting canaries!', True)
             log(e)
             exit(1)
         finally:
@@ -255,9 +260,9 @@ def setup():
         #
 
         print('Adding virtual users...')
-        log('Connecting to Canary Server database...')
         try:
             if mail_db.is_closed():
+                log('Connecting to Canary Server database...')
                 mail_db.connect()
 
             for canary in canaries:
@@ -273,7 +278,7 @@ def setup():
                     raise
 
         except Exception as e:
-            error('An error occured while adding virtual domains!')
+            error('An error occured while adding virtual domains!', True)
             log(e)
             exit(1)
         finally:
@@ -296,13 +301,73 @@ def daemon(delay):
 
     # setup scheduler
     s = sched.scheduler(time.time, time.sleep)
-    s.enter(delay, 1, sync, (s, delay))
+    sync(s, delay)
     s.run()
 
 
 def sync(sc, delay):
-    print('[%s] Running...' %
+    print('[%s] Checking for changes...' %
           datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+
+    # domain to uuid mapping
+    domain_mapping = dict()
+
+    print('Pulling domain configuration from backend...')
+    try:
+        if canary_db.is_closed():
+            log('Connecting to Canary Backend database...')
+            canary_db.connect()
+        if mail_db.is_closed():
+            log('Connecting to Canary Server database...')
+            mail_db.connect()
+
+        log('Getting domain configuration...')
+        domains = models.Domain.select()
+
+        print('Checking for new domains...')
+        log('Adding new domains...')
+        for domain in domains:
+            try:
+                d = models.VirtualDomain(name=domain.domain)
+                d.save()
+                print('Adding %s' % domain.domain)
+                domain_mapping[domain.uuid] = d.id
+            except peewee.IntegrityError:
+                log('Skipping %s - already exists' % domain.domain)
+                d = models.VirtualDomain.get(
+                    models.VirtualDomain.name == domain.domain)
+                domain_mapping[domain.uuid] = d.id
+                pass
+            except:
+                raise
+
+        print('Checking for new canaries...')
+
+        log('Getting canary accounts...')
+        canaries = models.Canary.select()
+
+        for canary in canaries:
+            try:
+                u = models.VirtualUser(
+                    domain_id=domain_mapping[canary.domain], email=canary.email, password=crypt(canary.password, '$6$%s' % str(sha1(os.urandom(32)).hexdigest())[0:16]))
+                u.save()
+                log('Adding %s' % canary.email)
+            except peewee.IntegrityError:
+                log('Skipping %s - already exists' % canary.email)
+                pass
+            except:
+                raise
+
+    except Exception as e:
+        error('An error occured while getting domains!')
+        error(e)
+    finally:
+        canary_db.close()
+        mail_db.close()
+        log('Connection closed.')
+
+    print('Done.')
+
     sc.enter(delay, 1, sync, (sc, delay))
 
 
