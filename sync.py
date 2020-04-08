@@ -324,7 +324,7 @@ if '-s' in sys.argv:
 # if the option to start the sync service as daemon was called
 elif '-d' in sys.argv:
     delay = 60
-    if len(sys.argv) >= 2 and sys.argv[2].isnumeric():
+    if len(sys.argv) > 2 and sys.argv[2].isnumeric():
         delay = int(sys.argv[2])
     daemon(delay)
 
