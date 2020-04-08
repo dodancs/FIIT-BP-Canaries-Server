@@ -21,16 +21,16 @@ debug = False
 ###############
 
 
-def log(message):
+def log(message, prefix=''):
     if debug:
-        cprint('[DEBUG]: %s' % message, 'yellow')
+        cprint('%s[DEBUG]: %s' % (prefix, message), 'yellow')
 
 
 def error(message, color=False):
     if color:
         cprint('[ERROR]: %s' % message, 'white', 'on_red')
     else:
-        print('[ERROR]: %s' % message, file=sys.stderr)
+        print('[canary-server][ERROR]: %s' % message, file=sys.stderr)
 
 
 def printHelp():
@@ -296,7 +296,7 @@ def setup():
 
 
 def daemon(delay):
-    log('Daemon time!')
+    log('Daemon time!', prefix='[canary-server]')
     print('Starting Canary Server sync daemon service...')
 
     # setup scheduler
@@ -306,8 +306,9 @@ def daemon(delay):
 
 
 def sync(sc, delay):
-    print('[%s] Checking for changes...' %
-          datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+    print('Checking for changes...')
+    log('[%s] Checking for changes...' %
+        datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'), prefix='[canary-server]')
 
     # domain to uuid mapping
     domain_mapping = dict()
@@ -315,17 +316,19 @@ def sync(sc, delay):
     print('Pulling domain configuration from backend...')
     try:
         if canary_db.is_closed():
-            log('Connecting to Canary Backend database...')
+            log('Connecting to Canary Backend database...',
+                prefix='[canary-server]')
             canary_db.connect()
         if mail_db.is_closed():
-            log('Connecting to Canary Server database...')
+            log('Connecting to Canary Server database...',
+                prefix='[canary-server]')
             mail_db.connect()
 
-        log('Getting domain configuration...')
+        log('Getting domain configuration...', prefix='[canary-server]')
         domains = models.Domain.select()
 
         print('Checking for new domains...')
-        log('Adding new domains...')
+        log('Adding new domains...', prefix='[canary-server]')
         for domain in domains:
             try:
                 d = models.VirtualDomain(name=domain.domain)
@@ -333,7 +336,8 @@ def sync(sc, delay):
                 print('Adding %s' % domain.domain)
                 domain_mapping[domain.uuid] = d.id
             except peewee.IntegrityError:
-                log('Skipping %s - already exists' % domain.domain)
+                log('Skipping %s - already exists' %
+                    domain.domain, prefix='[canary-server]')
                 d = models.VirtualDomain.get(
                     models.VirtualDomain.name == domain.domain)
                 domain_mapping[domain.uuid] = d.id
@@ -343,7 +347,7 @@ def sync(sc, delay):
 
         print('Checking for new canaries...')
 
-        log('Getting canary accounts...')
+        log('Getting canary accounts...', prefix='[canary-server]')
         canaries = models.Canary.select()
 
         for canary in canaries:
@@ -351,9 +355,10 @@ def sync(sc, delay):
                 u = models.VirtualUser(
                     domain_id=domain_mapping[canary.domain], email=canary.email, password=crypt(canary.password, '$6$%s' % str(sha1(os.urandom(32)).hexdigest())[0:16]))
                 u.save()
-                log('Adding %s' % canary.email)
+                log('Adding %s' % canary.email, prefix='[canary-server]')
             except peewee.IntegrityError:
-                log('Skipping %s - already exists' % canary.email)
+                log('Skipping %s - already exists' %
+                    canary.email, prefix='[canary-server]')
                 pass
             except:
                 raise
@@ -364,7 +369,7 @@ def sync(sc, delay):
     finally:
         canary_db.close()
         mail_db.close()
-        log('Connection closed.')
+        log('Connection closed.', prefix='[canary-server]')
 
     print('Done.')
 
