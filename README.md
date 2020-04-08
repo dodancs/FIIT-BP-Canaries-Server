@@ -26,8 +26,6 @@ This repository holds source codes for the server portion of the Leak-detection 
 - IPTables firewall
 - Python >= 3.5.X _(incompatible with Python 2.X.X)_
 
-
-
 ## Installing & configuring Redis log server
 
 ### Installing required packages
@@ -38,8 +36,6 @@ This repository holds source codes for the server portion of the Leak-detection 
 ~$ sudo apt install syslog-ng-mod-redis # Redis module should be installed automatically
 ```
 
-
-
 ### Configuring Redis server
 
 Here are the parameters that need to be changed in the Redis config file (usually `/etc/redis.conf` or `/etc/redis/redis.conf`):
@@ -49,8 +45,6 @@ bind 0.0.0.0 # set the socket to accept connections from any IP not only localho
 ```
 
 You may also change other parameters to suite your configuration. The configuration file is well documented: [Redis 3.0 configuration](https://raw.githubusercontent.com/antirez/redis/3.0/redis.conf).
-
-
 
 ### Configuring IPTables firewall
 
@@ -69,8 +63,6 @@ The first rule allows to reach Redis only from a specific IP address which is th
 This configuration ensures that no one, but Canary Experts can communicate with the Redis database.
 
 _NOTE: With newer versions of syslog-ng, you may specify `auth([PASSWORD])` parameter in the destination configuration and `requirepass [PASSWORD]` parameter in the Redis configuration to protect the Redis server with a password instead of IPTables._
-
-
 
 ### Configuring Syslog-ng
 
@@ -124,8 +116,6 @@ log { source(s_src); filter(f_dovecot); destination(d_redis); };
 log { source(s_src); filter(f_postfix); destination(d_redis); };
 ```
 
-
-
 ### Restart and enable services
 
 ```bash
@@ -136,8 +126,6 @@ log { source(s_src); filter(f_postfix); destination(d_redis); };
 ~$ systemctl enable redis-server
 ~$ systemctl enable syslog-ng
 ```
-
-
 
 ## Installing & configuring mail honeypot
 
@@ -150,8 +138,6 @@ log { source(s_src); filter(f_postfix); destination(d_redis); };
 ~$ sudo apt install python3-pip
 ~$ sudo apt install git
 ```
-
-
 
 ### Configuring Postfix
 
@@ -291,8 +277,6 @@ smtps     inet  n       -       y       -       -       smtpd
   -o milter_macro_daemon_name=ORIGINATING
 ...
 ```
-
-
 
 ### Configuring Dovecot
 
@@ -452,8 +436,6 @@ As last, update folder permissions:
 ~$ sudo chmod -R o-rwx /etc/dovecot
 ```
 
-
-
 ### Configuring IPTables firewall
 
 If the firewall configuration from previous steps is used, be sure to add rules to allow SMTP and IMAP communication through:
@@ -464,8 +446,6 @@ If the firewall configuration from previous steps is used, be sure to add rules 
 ~$ sudo iptables -I INPUT -i [INTERFACE] -p tcp -m tcp --dport 143 -j ACCEPT
 ~$ sudo iptables -I INPUT -i [INTERFACE] -p tcp -m tcp --dport 993 -j ACCEPT
 ```
-
-
 
 ### <a name="sync-service"></a>Setting up sync service
 
@@ -523,8 +503,6 @@ Install Python requirements (_after activating the environment, if wanted_):
 /opt/FIIT-BP-Canaries-Server/$ pip3 install -r ./requirements.txt
 ```
 
-
-
 ### Configuring database
 
 First, we need to create the MySQL tables for our virtual users, domains and aliases.
@@ -550,9 +528,34 @@ If you went the manual route, be sure to reset the permissions by doing:
 ~$ sudo chown -R vmail:vmail /var/mail/
 ```
 
+### Configuring Canary Server sync service daemon
 
+The code comes with a systemd service file which we need to copy to the appropriate place:
 
+```bash
+~$ cd /opt/FIIT-BP-Canaries-Server/
+/opt/FIIT-BP-Canaries-Server/$ cp ./canary-server.service /etc/systemd/system/canary-server.service
+```
 
+If did not set-up the Python virtual environment or have cloned the repository elsewhere, then you will need to edit the service file:
+
+```ini
+[Unit]
+Description=Canary Server sync service daemon
+After=syslog.target network.target
+
+[Service]
+Type=simple
+User=vmail
+WorkingDirectory=[PATH TO PROJECT]
+ExecStart=[PATH TO PYTHON 3 EXECUTABLE] [PATH TO PROJECT]/sync.py --debug -d
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+```
+
+You may also remove the `--debug` flag.
 
 ## Other stuff
 
