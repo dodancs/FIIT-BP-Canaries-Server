@@ -1,0 +1,13 @@
+[Unit]
+Description=Canary Server sync service daemon
+After=syslog.target network.target
+
+[Service]
+Type=simple
+User=vmail
+WorkingDirectory=/opt/FIIT-BP-Canaries-Server/
+ExecStart=/opt/FIIT-BP-Canaries-Server/env/bin/python /opt/FIIT-BP-Canaries-Server/sync.py --debug -d
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
