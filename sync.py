@@ -9,6 +9,7 @@ import getpass
 import json
 from crypt import crypt
 from hashlib import sha1
+import datetime
 
 from models.BaseModelMail import db as mail_db
 from models.BaseModelCanaries import db as canary_db
@@ -300,7 +301,8 @@ def daemon(delay):
 
 
 def sync(sc, delay):
-    print('Running...')
+    print('[%s] Running...' %
+          datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
     sc.enter(delay, 1, sync, (sc, delay))
 
 
