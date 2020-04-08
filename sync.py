@@ -143,17 +143,23 @@ def setup():
 
         print('Setting up virtual domain folders...')
 
-        if not os.path.exists('/var/mail/vhosts/') or not os.path.isdir('/var/mail/vhosts/'):
-            log('Creating vhosts folder...')
-            os.makedirs('/var/mail/vhosts/', mode=0o770, exist_ok=True)
-            os.chown('/var/mail/vhosts/', uid, gid)
+        try:
+            if not os.path.exists('/var/mail/vhosts/') or not os.path.isdir('/var/mail/vhosts/'):
+                log('Creating vhosts folder...')
+                os.makedirs('/var/mail/vhosts/', mode=0o770, exist_ok=True)
+                os.chown('/var/mail/vhosts/', uid, gid)
 
-        for domain in domains:
-            path = '/var/mail/vhosts/%s' % domain.domain
-            if not os.path.exists(path) or not os.path.isdir(path):
-                log('Directory for %s does not exist. Creating...' % domain.domain)
-                os.makedirs(path, mode=0o770, exist_ok=True)
-                os.chown(path, uid, gid)
+            for domain in domains:
+                path = '/var/mail/vhosts/%s' % domain.domain
+                if not os.path.exists(path) or not os.path.isdir(path):
+                    log('Directory for %s does not exist. Creating...' %
+                        domain.domain)
+                    os.makedirs(path, mode=0o770, exist_ok=True)
+                    os.chown(path, uid, gid)
+        except Exception as e:
+            error('An error occured while creating folders!')
+            log(e)
+            exit(1)
 
         print('Done.')
 
@@ -283,16 +289,25 @@ def setup():
 ##############
 
 
-def daemon():
+def daemon(delay):
     log('Daemon time!')
-    print('Starting canary sync daemon service...')
+    print('Starting Canary Server sync daemon service...')
+
     # setup scheduler
     s = sched.scheduler(time.time, time.sleep)
+    s.enter(delay, 1, sync, (s, delay))
+    s.run()
+
+
+def sync(sc, delay):
+    print('Running...')
+    sc.enter(delay, 1, sync, (sc, delay))
 
 
 ########################
 #   Argument parsing   #
 ########################
+
 
 # not enough parameters supplied - show help
 if len(sys.argv) < 2:
@@ -308,7 +323,10 @@ if '-s' in sys.argv:
 
 # if the option to start the sync service as daemon was called
 elif '-d' in sys.argv:
-    daemon()
+    delay = 60
+    if len(sys.argv) >= 2 and sys.argv[2].isnumeric():
+        delay = int(sys.argv[2])
+    daemon(delay)
 
 # unsupported option
 else:
