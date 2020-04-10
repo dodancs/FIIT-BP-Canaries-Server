@@ -386,7 +386,7 @@ def sync(sc, delay):
                 u = models.VirtualUser(
                     domain_id=domain_mapping[canary.domain][0], email=canary.email, password=crypt(canary.password, '$6$%s' % str(sha1(os.urandom(32)).hexdigest())[0:16]))
                 u.save()
-                logger.debug('Adding %s' % canary.email)
+                logger.info('Adding %s' % canary.email)
             except peewee.IntegrityError:
                 logger.debug('Skipping %s - already exists' %
                              canary.email)
@@ -401,8 +401,12 @@ def sync(sc, delay):
         try:
             for maildir in maildirs:
                 mail = parser.getMail(maildir[0])
-                logger.debug('Mailbox %s has %s new messages.' %
-                             (maildir[0], len(mail)))
+                if len(mail):
+                    logger.info('Mailbox %s has %s new messages.' %
+                                (maildir[0], len(mail)))
+                else:
+                    logger.debug('Mailbox %s has %s new messages.' %
+                                 (maildir[0], len(mail)))
                 for m in mail:
                     models.Mail(uuid=uuid.uuid4(),
                                 canary=maildir[1], received_on=m['date'], mail_from=m['sender'], subject=m['subject'], body=m['body']).save()

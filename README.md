@@ -132,11 +132,8 @@ log { source(s_src); filter(f_postfix); destination(d_redis); };
 ### Installing required packages
 
 ```bash
-~$ sudo apt update
 ~$ sudo apt install postfix postfix-mysql
 ~$ sudo apt install dovecot-core dovecot-imapd dovecot-lmtpd dovecot-mysql
-~$ sudo apt install python3-pip
-~$ sudo apt install git
 ```
 
 ### Configuring Postfix
@@ -448,6 +445,14 @@ If the firewall configuration from previous steps is used, be sure to add rules 
 ```
 
 ### <a name="sync-service"></a>Setting up sync service
+
+Install required packages:
+
+```bash
+~$ sudo apt install python3 python3-pip
+~$ sudo apt install git
+~$ sudo apt install build-essential libsystemd-dev
+```
 
 Download the repository code:
 
