@@ -25,7 +25,7 @@ Config = None
 logger = logging.getLogger('canary-server')
 handler = logging.handlers.SysLogHandler(address='/dev/log')
 handler.setFormatter(logging.Formatter(
-    '[%(levelname)s] %(message)s'
+    '%(name)s: [%(levelname)s] %(message)s'
 ))
 logger.addHandler(handler)
 
