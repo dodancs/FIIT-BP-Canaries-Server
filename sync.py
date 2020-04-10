@@ -10,11 +10,14 @@ import json
 from crypt import crypt
 from hashlib import sha1
 import datetime
+from mailparser import MailParser
 
 from models.BaseModelMail import db as mail_db
 from models.BaseModelCanaries import db as canary_db
 
 debug = False
+parser = None
+
 
 ###############
 #   Helpers   #
@@ -296,8 +299,13 @@ def setup():
 
 
 def daemon(delay):
+    global parser
+
     log('Daemon time!', prefix='[canary-server]')
     print('Starting Canary Server sync daemon service...')
+
+    # setup MailParser
+    parser = MailParser()
 
     # setup scheduler
     s = sched.scheduler(time.time, time.sleep)
@@ -306,6 +314,10 @@ def daemon(delay):
 
 
 def sync(sc, delay):
+    global parser
+
+    maildirs = []
+
     print('Checking for changes...')
     log('[%s] Checking for changes...' %
         datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'), prefix='[canary-server]')
@@ -334,13 +346,13 @@ def sync(sc, delay):
                 d = models.VirtualDomain(name=domain.domain)
                 d.save()
                 print('Adding %s' % domain.domain)
-                domain_mapping[domain.uuid] = d.id
+                domain_mapping[domain.uuid] = [d.id, domain.domain]
             except peewee.IntegrityError:
                 log('Skipping %s - already exists' %
                     domain.domain, prefix='[canary-server]')
                 d = models.VirtualDomain.get(
                     models.VirtualDomain.name == domain.domain)
-                domain_mapping[domain.uuid] = d.id
+                domain_mapping[domain.uuid] = [d.id, domain.domain]
                 pass
             except:
                 raise
@@ -352,8 +364,11 @@ def sync(sc, delay):
 
         for canary in canaries:
             try:
+                maildirs.append('/var/mail/vhosts/%s/%s/' %
+                                (domain_mapping[canary.domain][1], str(canary.email).split('@')[0]))
+
                 u = models.VirtualUser(
-                    domain_id=domain_mapping[canary.domain], email=canary.email, password=crypt(canary.password, '$6$%s' % str(sha1(os.urandom(32)).hexdigest())[0:16]))
+                    domain_id=domain_mapping[canary.domain][0], email=canary.email, password=crypt(canary.password, '$6$%s' % str(sha1(os.urandom(32)).hexdigest())[0:16]))
                 u.save()
                 log('Adding %s' % canary.email, prefix='[canary-server]')
             except peewee.IntegrityError:
@@ -372,6 +387,8 @@ def sync(sc, delay):
         log('Connection closed.', prefix='[canary-server]')
 
     print('Done.')
+
+    print(maildirs)
 
     sc.enter(delay, 1, sync, (sc, delay))
 
