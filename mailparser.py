@@ -23,7 +23,10 @@ class MailParser:
 
     def getSubject(self, message):
         subject = decode_header(message['Subject'])[0]
-        subject = subject[0].decode(subject[1])
+        if subject[1]:
+            subject = subject[0].decode(subject[1])
+        else:
+            subject = subject[0]
         return subject
 
     def getDate(self, message):
