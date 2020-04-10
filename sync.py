@@ -386,7 +386,7 @@ def sync(sc, delay):
         for maildir in maildirs:
             mail = parser.getMail(maildir[0])
             log('Mailbox %s has %s new messages.' %
-                (maildir, len(mail)), prefix='[canary-server]')
+                (maildir[0], len(mail)), prefix='[canary-server]')
             for m in mail:
                 models.Mail(uuid=uuid.uuid4(),
                             canary=maildir[1], received_on=m['date'], mail_from=m['sender'], subject=m['subject'], body=m['body']).save()
