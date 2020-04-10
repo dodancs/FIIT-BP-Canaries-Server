@@ -440,6 +440,8 @@ if len(sys.argv) < 2:
 if '--debug' in sys.argv:
     debug = True
     logger.setLevel(logging.DEBUG)
+else:
+    logger.setLevel(logging.INFO)
 
 # if the option to trigger setup was called
 if '-s' in sys.argv:
