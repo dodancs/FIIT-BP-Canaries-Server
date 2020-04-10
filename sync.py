@@ -12,6 +12,8 @@ from hashlib import sha1
 import datetime
 from mailparser import MailParser
 import uuid
+import logging
+from systemd.journal import JournaldLogHandler
 
 from models.BaseModelMail import db as mail_db
 from models.BaseModelCanaries import db as canary_db
@@ -20,22 +22,26 @@ debug = False
 parser = None
 Config = None
 
+logger = logging.getLogger('canary-server')
+journald_handler = JournaldLogHandler()
+journald_handler.setFormatter(logging.Formatter(
+    '[%(levelname)s] %(message)s'
+))
+logger.addHandler(journald_handler)
+
 
 ###############
 #   Helpers   #
 ###############
 
 
-def log(message, prefix=''):
+def log(message):
     if debug:
-        cprint('%s[DEBUG]: %s' % (prefix, message), 'yellow')
+        cprint('[DEBUG]: %s' % message, 'yellow')
 
 
-def error(message, color=False):
-    if color:
-        cprint('[ERROR]: %s' % message, 'white', 'on_red')
-    else:
-        print('[canary-server][ERROR]: %s' % message, file=sys.stderr)
+def error(message):
+    cprint('[ERROR]: %s' % message, 'white', 'on_red')
 
 
 def printHelp():
@@ -61,7 +67,7 @@ def setup():
     except:
         error('Unable to open config.json!\n\
             If you haven\'t created a configuration file, please use the example configuration file as a guide.\n\
-            Otherwise, make sure the file permissions are set correctly.', Trues)
+            Otherwise, make sure the file permissions are set correctly.')
         exit(1)
 
     #
@@ -69,7 +75,7 @@ def setup():
     #
     if getpass.getuser() != 'root':
         error('Please run the script as root! Current user: %s' %
-              getpass.getuser(), True)
+              getpass.getuser())
         exit(1)
 
     #
@@ -96,7 +102,7 @@ def setup():
         mail_db.create_tables(
             [models.VirtualAlias, models.VirtualDomain, models.VirtualUser])
     except Exception as e:
-        error('An error occured while creating tables!', True)
+        error('An error occured while creating tables!')
         log(e)
         exit(1)
     finally:
@@ -110,7 +116,7 @@ def setup():
 
     if sys.platform != "linux" and sys.platform != "linux2":
         error(
-            'Rest of the configuration is not designed for Windows operating systems!', True)
+            'Rest of the configuration is not designed for Windows operating systems!')
         exit(1)
 
     #
@@ -139,7 +145,7 @@ def setup():
             log('Getting domain configuration...')
             domains = models.Domain.select()
         except Exception as e:
-            error('An error occured while getting data!', True)
+            error('An error occured while getting data!')
             log(e)
             exit(1)
         finally:
@@ -167,7 +173,7 @@ def setup():
                     os.makedirs(path, mode=0o770, exist_ok=True)
                     os.chown(path, uid, gid)
         except Exception as e:
-            error('An error occured while creating folders!', True)
+            error('An error occured while creating folders!')
             log(e)
             exit(1)
 
@@ -199,7 +205,7 @@ def setup():
                 log('Getting domain configuration...')
                 domains = models.Domain.select()
             except Exception as e:
-                error('An error occured while getting domains!', True)
+                error('An error occured while getting domains!')
                 log(e)
                 exit(1)
             finally:
@@ -232,7 +238,7 @@ def setup():
                 except:
                     raise
         except Exception as e:
-            error('An error occured while adding virtual domains!', True)
+            error('An error occured while adding virtual domains!')
             log(e)
             exit(1)
         finally:
@@ -252,7 +258,7 @@ def setup():
             log('Getting canary accounts...')
             canaries = models.Canary.select()
         except Exception as e:
-            error('An error occured while getting canaries!', True)
+            error('An error occured while getting canaries!')
             log(e)
             exit(1)
         finally:
@@ -283,7 +289,7 @@ def setup():
                     raise
 
         except Exception as e:
-            error('An error occured while adding virtual domains!', True)
+            error('An error occured while adding virtual domains!')
             log(e)
             exit(1)
         finally:
@@ -301,20 +307,20 @@ def setup():
 
 
 def daemon(delay):
-    global parser, Config
+    global parser, Config, logger
 
     # Open configuration file
     try:
         with open('config.json', encoding='utf8') as config_file:
             Config = json.load(config_file)
     except:
-        error('Unable to open config.json!\n\
+        logger.error('Unable to open config.json!\n\
             If you haven\'t created a configuration file, please use the example configuration file as a guide.\n\
             Otherwise, make sure the file permissions are set correctly.')
         exit(1)
 
-    log('Daemon time!', prefix='[canary-server]')
-    print('Starting Canary Server sync daemon service...')
+    logger.debug('Daemon time!')
+    logger.info('Starting Canary Server sync daemon service...')
 
     # setup MailParser
     parser = MailParser()
@@ -330,38 +336,36 @@ def sync(sc, delay):
 
     maildirs = []
 
-    print('Checking for changes...')
-    log('[%s] Checking for changes...' %
-        datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'), prefix='[canary-server]')
+    logger.info('Checking for changes...')
+    logger.debug('[%s] Checking for changes...' %
+                 datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
     # domain to uuid mapping
     domain_mapping = dict()
 
-    print('Pulling domain configuration from backend...')
+    logger.info('Pulling domain configuration from backend...')
     try:
         if canary_db.is_closed():
-            log('Connecting to Canary Backend database...',
-                prefix='[canary-server]')
+            logger.debug('Connecting to Canary Backend database...')
             canary_db.connect()
         if mail_db.is_closed():
-            log('Connecting to Canary Server database...',
-                prefix='[canary-server]')
+            logger.debug('Connecting to Canary Server database...')
             mail_db.connect()
 
-        log('Getting domain configuration...', prefix='[canary-server]')
+        logger.debug('Getting domain configuration...')
         domains = models.Domain.select()
 
-        print('Checking for new domains...')
-        log('Adding new domains...', prefix='[canary-server]')
+        logger.info('Checking for new domains...')
+        logger.debug('Adding new domains...')
         for domain in domains:
             try:
                 d = models.VirtualDomain(name=domain.domain)
                 d.save()
-                print('Adding %s' % domain.domain)
+                logger.info('Adding %s' % domain.domain)
                 domain_mapping[domain.uuid] = [d.id, domain.domain]
             except peewee.IntegrityError:
-                log('Skipping %s - already exists' %
-                    domain.domain, prefix='[canary-server]')
+                logger.debug('Skipping %s - already exists' %
+                             domain.domain)
                 d = models.VirtualDomain.get(
                     models.VirtualDomain.name == domain.domain)
                 domain_mapping[domain.uuid] = [d.id, domain.domain]
@@ -369,9 +373,9 @@ def sync(sc, delay):
             except:
                 raise
 
-        print('Checking for new canaries...')
+        logger.info('Checking for new canaries...')
 
-        log('Getting canary accounts...', prefix='[canary-server]')
+        logger.debug('Getting canary accounts...')
         canaries = models.Canary.select()
 
         for canary in canaries:
@@ -382,35 +386,39 @@ def sync(sc, delay):
                 u = models.VirtualUser(
                     domain_id=domain_mapping[canary.domain][0], email=canary.email, password=crypt(canary.password, '$6$%s' % str(sha1(os.urandom(32)).hexdigest())[0:16]))
                 u.save()
-                log('Adding %s' % canary.email, prefix='[canary-server]')
+                logger.debug('Adding %s' % canary.email)
             except peewee.IntegrityError:
-                log('Skipping %s - already exists' %
-                    canary.email, prefix='[canary-server]')
+                logger.debug('Skipping %s - already exists' %
+                             canary.email)
                 pass
             except:
                 raise
 
-        print('Checking for new mail...')
+        logger.info('Checking for new mail...')
 
-        log('Getting messages from maildirs...', prefix='[canary-server]')
+        logger.debug('Getting messages from maildirs...')
 
-        for maildir in maildirs:
-            mail = parser.getMail(maildir[0])
-            log('Mailbox %s has %s new messages.' %
-                (maildir[0], len(mail)), prefix='[canary-server]')
-            for m in mail:
-                models.Mail(uuid=uuid.uuid4(),
-                            canary=maildir[1], received_on=m['date'], mail_from=m['sender'], subject=m['subject'], body=m['body']).save()
+        try:
+            for maildir in maildirs:
+                mail = parser.getMail(maildir[0])
+                logger.debug('Mailbox %s has %s new messages.' %
+                             (maildir[0], len(mail)))
+                for m in mail:
+                    models.Mail(uuid=uuid.uuid4(),
+                                canary=maildir[1], received_on=m['date'], mail_from=m['sender'], subject=m['subject'], body=m['body']).save()
+        except Exception as e:
+            logger.warning('An error occured while parsing maildirs!')
+            logger.warning(e)
 
     except Exception as e:
-        error('An error occured while getting domains!')
-        error(e)
+        logger.warning('An error occured while getting domains!')
+        logger.warning(e)
     finally:
         canary_db.close()
         mail_db.close()
-        log('Connection closed.', prefix='[canary-server]')
+        logger.debug('Connection closed.')
 
-    print('Done.')
+    logger.info('Done.')
 
     sc.enter(delay, 1, sync, (sc, delay))
 
@@ -427,6 +435,7 @@ if len(sys.argv) < 2:
 # enable debugging
 if '--debug' in sys.argv:
     debug = True
+    logger.setLevel(logging.DEBUG)
 
 # if the option to trigger setup was called
 if '-s' in sys.argv:
