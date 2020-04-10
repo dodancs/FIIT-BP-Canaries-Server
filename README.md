@@ -10,7 +10,7 @@ This repository holds source codes for the server portion of the Leak-detection 
 - Syslog configuration
 - Canary & mail sync service setup & configuration
 
-## Canary Sync service
+## Canary Server sync service
 
 - [sync.py](sync.py)
 - [Data models](models/)
@@ -18,6 +18,8 @@ This repository holds source codes for the server portion of the Leak-detection 
   - [Virtual users](schema/virtual-users.sql)
   - [Virtual aliases](schema/virtual-aliases.sql)
 - [Example configuration](config.example.json)
+- [Syslog-ng Redis config](syslog-ng/redis.conf)
+- [Syslog-ng Canary Server config](syslog-ng/canary-server.conf)
 
 ## Prerequisites
 
@@ -66,13 +68,24 @@ _NOTE: With newer versions of syslog-ng, you may specify `auth([PASSWORD])` para
 
 ### Configuring Syslog-ng
 
-Create a new file in `/etc/syslog-ng/conf.d/`:
+You may [clone the repository](#sync-service) and copy the configuration files or create new files for Redis and Canary server configuration in `/etc/syslog-ng/conf.d/`:
 
 ```bash
+~$ touch /etc/syslog-ng/conf.d/canary-server.conf
 ~$ touch /etc/syslog-ng/conf.d/redis.conf
 ```
 
-Open the file in your favourite editor and insert the following lines:
+Open `canary-server.conf` in your favourite editor and insert the following lines:
+
+```ini
+@version: 3.5
+
+destination d_canary_server { file('/var/log/canary-server.log'); };
+filter f_canary_server { program("canary\-server"); };
+log { source(s_src); filter(f_canary_server); destination(d_canary_server); };
+```
+
+Open `redis.conf` in your favourite editor and insert the following lines:
 
 ```ini
 # Configure Redis destination
@@ -108,12 +121,13 @@ source s_src {
 };
 ```
 
-Change the name of the source in the configuration file we created earlier to match the name in the main configuration:
+Change the name of the source (in this case `s_src`) in the configuration files we created earlier to match the name in the main configuration:
 
 ```ini
+log { source(s_src); ...
 # Enable logging of postfix and dovecot to Redis
-log { source(s_src); filter(f_dovecot); destination(d_redis); };
-log { source(s_src); filter(f_postfix); destination(d_redis); };
+log { source(s_src); ...
+log { source(s_src); ...
 ```
 
 ### Restart and enable services
@@ -487,7 +501,8 @@ Open the `config.json` file in your favourite editor and change the settings to 
     "db_password": "password",
     "db_db": "database",
     "db_charset": "utf8mb4"
-  }
+  },
+  "maildir": "/var/mail/vhosts/"
 }
 ```
 
@@ -512,7 +527,7 @@ Install Python requirements (_after activating the environment, if wanted_):
 
 First, we need to create the MySQL tables for our virtual users, domains and aliases.
 
-To do this, [setup Canary Backend sync service](#sync-service), and launch the `sync.py` script with the `-s` parameter and follow on-screen instructions. You may also specify `--debug` parameter (_must be first_) to show detailed information:
+To do this, [setup Canary Server sync service](#sync-service), and launch the `sync.py` script with the `-s` parameter and follow on-screen instructions. You may also specify `--debug` parameter (_must be first_) to show detailed information:
 
 ```bash
 ~$ cd /opt/FIIT-BP-Canaries-Server/
