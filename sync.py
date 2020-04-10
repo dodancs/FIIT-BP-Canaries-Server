@@ -18,6 +18,7 @@ from models.BaseModelCanaries import db as canary_db
 
 debug = False
 parser = None
+Config = None
 
 
 ###############
@@ -300,7 +301,17 @@ def setup():
 
 
 def daemon(delay):
-    global parser
+    global parser, Config
+
+    # Open configuration file
+    try:
+        with open('config.json', encoding='utf8') as config_file:
+            Config = json.load(config_file)
+    except:
+        error('Unable to open config.json!\n\
+            If you haven\'t created a configuration file, please use the example configuration file as a guide.\n\
+            Otherwise, make sure the file permissions are set correctly.')
+        exit(1)
 
     log('Daemon time!', prefix='[canary-server]')
     print('Starting Canary Server sync daemon service...')
@@ -315,7 +326,7 @@ def daemon(delay):
 
 
 def sync(sc, delay):
-    global parser
+    global parser, Config
 
     maildirs = []
 
@@ -365,8 +376,8 @@ def sync(sc, delay):
 
         for canary in canaries:
             try:
-                maildirs.append(['/var/mail/vhosts/%s/%s/' %
-                                 (domain_mapping[canary.domain][1], str(canary.email).split('@')[0]), canary.uuid])
+                maildirs.append(['%s%s/%s/' %
+                                 (Config['maildir'], domain_mapping[canary.domain][1], str(canary.email).split('@')[0]), canary.uuid])
 
                 u = models.VirtualUser(
                     domain_id=domain_mapping[canary.domain][0], email=canary.email, password=crypt(canary.password, '$6$%s' % str(sha1(os.urandom(32)).hexdigest())[0:16]))
