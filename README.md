@@ -69,7 +69,7 @@ _NOTE: With newer versions of syslog-ng, you may specify `auth([PASSWORD])` para
 Create a new file in `/etc/syslog-ng/conf.d/`:
 
 ```bash
-~$ touch /etc/syslog-ng/conf.d/canaries.conf
+~$ touch /etc/syslog-ng/conf.d/redis.conf
 ```
 
 Open the file in your favourite editor and insert the following lines:

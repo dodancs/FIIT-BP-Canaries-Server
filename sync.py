@@ -13,7 +13,7 @@ import datetime
 from mailparser import MailParser
 import uuid
 import logging
-from systemd.journal import JournaldLogHandler
+import logging.handlers
 
 from models.BaseModelMail import db as mail_db
 from models.BaseModelCanaries import db as canary_db
@@ -23,11 +23,11 @@ parser = None
 Config = None
 
 logger = logging.getLogger('canary-server')
-journald_handler = JournaldLogHandler()
-journald_handler.setFormatter(logging.Formatter(
-    '[%(levelname)s] %(message)s'
-))
-logger.addHandler(journald_handler)
+handler = logging.handlers.SysLogHandler(address='/dev/log')
+# handler.setFormatter(logging.Formatter(
+#     '[%(levelname)s] %(message)s'
+# ))
+logger.addHandler(handler)
 
 
 ###############
