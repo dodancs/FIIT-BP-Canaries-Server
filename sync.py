@@ -11,6 +11,7 @@ from crypt import crypt
 from hashlib import sha1
 import datetime
 from mailparser import MailParser
+import uuid
 
 from models.BaseModelMail import db as mail_db
 from models.BaseModelCanaries import db as canary_db
@@ -364,8 +365,8 @@ def sync(sc, delay):
 
         for canary in canaries:
             try:
-                maildirs.append('/var/mail/vhosts/%s/%s/' %
-                                (domain_mapping[canary.domain][1], str(canary.email).split('@')[0]))
+                maildirs.append(['/var/mail/vhosts/%s/%s/' %
+                                 (domain_mapping[canary.domain][1], str(canary.email).split('@')[0]), canary.uuid])
 
                 u = models.VirtualUser(
                     domain_id=domain_mapping[canary.domain][0], email=canary.email, password=crypt(canary.password, '$6$%s' % str(sha1(os.urandom(32)).hexdigest())[0:16]))
@@ -378,6 +379,18 @@ def sync(sc, delay):
             except:
                 raise
 
+        print('Checking for new mail...')
+
+        log('Getting messages from maildirs...', prefix='[canary-server]')
+
+        for maildir in maildirs:
+            mail = parser.getMail(maildir[0])
+            log('Mailbox %s has %s new messages.' %
+                (maildir, len(mail)), prefix='[canary-server]')
+            for m in mail:
+                models.Mail(uuid=uuid.uuid4(),
+                            canary=maildir[1], received_on=m['date'], mail_from=m['sender'], subject=m['subject'], body=m['body']).save()
+
     except Exception as e:
         error('An error occured while getting domains!')
         error(e)
@@ -387,8 +400,6 @@ def sync(sc, delay):
         log('Connection closed.', prefix='[canary-server]')
 
     print('Done.')
-
-    print(maildirs)
 
     sc.enter(delay, 1, sync, (sc, delay))
 
