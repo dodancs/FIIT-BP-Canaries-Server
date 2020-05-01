@@ -227,7 +227,7 @@ def setup():
                 try:
                     d = models.VirtualDomain(name=domain.domain)
                     d.save()
-                    log('Adding %s' % domain.domain)
+                    print('Adding %s' % domain.domain)
                     domain_mapping[domain.uuid] = d.id
                 except peewee.IntegrityError:
                     log('Skipping %s - already exists' % domain.domain)
@@ -281,7 +281,7 @@ def setup():
                     u = models.VirtualUser(
                         domain_id=domain_mapping[canary.domain], email=canary.email, password=crypt(canary.password, '$6$%s' % str(sha1(os.urandom(32)).hexdigest())[0:16]))
                     u.save()
-                    log('Adding %s' % canary.email)
+                    print('Adding %s' % canary.email)
                 except peewee.IntegrityError:
                     log('Skipping %s - already exists' % canary.email)
                     pass

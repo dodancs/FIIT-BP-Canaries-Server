@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<diagram program="umlet" version="14.1.1">
+  <zoom_level>10</zoom_level>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>760</x>
+      <y>280</y>
+      <w>310</w>
+      <h>80</h>
+    </coordinates>
+    <panel_attributes>__virtual_domains__
+--
+- &lt;&lt;PK&gt;&gt; id: bigint(20)
+- &lt;&lt;UNIQUE&gt;&gt; name: varchar(255)</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>950</x>
+      <y>420</y>
+      <w>480</w>
+      <h>130</h>
+    </coordinates>
+    <panel_attributes>__virtual_users__
+--
+- &lt;&lt;PK&gt;&gt; id: bigint(20)
+- &lt;&lt;FK&gt;&gt; domain_id: bigint(20) -&gt; id on virtual_domains
+- password: varchar(255)
+- &lt;&lt;UNIQUE&gt;&gt; email: varchar(255)</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>420</x>
+      <y>420</y>
+      <w>480</w>
+      <h>130</h>
+    </coordinates>
+    <panel_attributes>__virtual_aliases__
+--
+- &lt;&lt;PK&gt;&gt; id: bigint(20)
+- &lt;&lt;FK&gt;&gt; domain_id: bigint(20) -&gt; id on virtual_domains
+- source: varchar(255)
+- destination: varchar(255)</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>650</x>
+      <y>310</y>
+      <w>130</w>
+      <h>130</h>
+    </coordinates>
+    <panel_attributes>lt=-
+m1=0..n
+m2=1
+</panel_attributes>
+    <additional_attributes>10.0;110.0;10.0;10.0;110.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>1060</x>
+      <y>310</y>
+      <w>180</w>
+      <h>130</h>
+    </coordinates>
+    <panel_attributes>lt=-
+m1=0..n
+m2=1
+</panel_attributes>
+    <additional_attributes>130.0;110.0;130.0;10.0;10.0;10.0</additional_attributes>
+  </element>
+</diagram>

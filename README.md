@@ -579,5 +579,6 @@ You may also remove the `--debug` flag.
 
 ## Other stuff
 
+- Data model [PNG](data-model-server.png)
 - Migration script from MySQL table to Canary Backend [migration.py](migration.py)
 - Data migration from Redis to Redis [redis-migrate.py](redis-migrate.py)
