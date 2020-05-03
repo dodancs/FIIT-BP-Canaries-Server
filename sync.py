@@ -353,9 +353,10 @@ def sync(sc, delay):
             mail_db.connect()
 
         logger.debug('Getting domain configuration...')
-        domains = models.Domain.select()
 
         logger.info('Checking for new domains...')
+        domains = models.Domain.select()
+
         logger.debug('Adding new domains...')
         for domain in domains:
             try:
@@ -372,6 +373,20 @@ def sync(sc, delay):
                 pass
             except:
                 raise
+
+        logger.info('Checking for obsolete domains...')
+        honeypot_domains = models.VirtualDomain.select()
+        for d in honeypot_domains:
+            try:
+                match = domains.where(models.Domain.domain == d.name)
+            except peewee.DoesNotExist:
+                logger.info('Removing %s' % d.name)
+                try:
+                    d.delete_instance()
+                except Exception as e:
+                    logger.warning('Error while removing domain')
+                    logger.warning(str(e))
+                    pass
 
         logger.info('Checking for new canaries...')
 
@@ -394,6 +409,21 @@ def sync(sc, delay):
             except:
                 raise
 
+        logger.info('Checking for orphaned canaries...')
+        honeypot_accounts = models.VirtualUser.select()
+        # TODO
+        for a in honeypot_accounts:
+            try:
+                match = canaries.where(models.Canary.email == a.email)
+            except peewee.DoesNotExist:
+                logger.info('Removing %s' % a.email)
+                try:
+                    a.delete_instance()
+                except Exception as e:
+                    logger.warning('Error while removing canary account')
+                    logger.warning(str(e))
+                    pass
+
         logger.info('Checking for new mail...')
 
         logger.debug('Getting messages from maildirs...')
@@ -408,8 +438,15 @@ def sync(sc, delay):
                     logger.debug('Mailbox %s has %s new messages.' %
                                  (maildir[0], len(mail)))
                 for m in mail:
-                    models.Mail(uuid=uuid.uuid4(),
-                                canary=maildir[1], received_on=m['date'], mail_from=m['sender'], subject=m['subject'], body=m['body']).save()
+                    try:
+                        models.Mail(uuid=uuid.uuid4(),
+                                    canary=maildir[1], received_on=m['date'], mail_from=m['sender'], subject=m['subject'], body=m['body']).save()
+                    except Exception as e:
+                        logger.warning(
+                            'Error while syncing mail from %s' % maildir[0])
+                        logger.warning(str(e))
+                        pass
+
         except Exception as e:
             logger.warning('An error occured while parsing maildirs!')
             logger.warning(e)
