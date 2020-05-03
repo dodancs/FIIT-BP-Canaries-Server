@@ -361,7 +361,8 @@ def sync(sc, delay):
         for domain in domains:
             try:
                 d = models.VirtualDomain(name=domain.domain)
-                d.save()
+                with mail_db.atomic():
+                    d.save()
                 logger.info('Adding %s' % domain.domain)
                 domain_mapping[domain.uuid] = [d.id, domain.domain]
             except peewee.IntegrityError:
@@ -378,7 +379,7 @@ def sync(sc, delay):
         honeypot_domains = models.VirtualDomain.select()
         for d in honeypot_domains:
             try:
-                match = domains.where(models.Domain.domain == d.name)
+                match = models.Domain.get(models.Domain.domain == d.name)
             except peewee.DoesNotExist:
                 logger.info('Removing %s' % d.name)
                 try:
@@ -400,7 +401,8 @@ def sync(sc, delay):
 
                 u = models.VirtualUser(
                     domain_id=domain_mapping[canary.domain][0], email=canary.email, password=crypt(canary.password, '$6$%s' % str(sha1(os.urandom(32)).hexdigest())[0:16]))
-                u.save()
+                with mail_db.atomic():
+                    u.save()
                 logger.info('Adding %s' % canary.email)
             except peewee.IntegrityError:
                 logger.debug('Skipping %s - already exists' %
@@ -414,7 +416,7 @@ def sync(sc, delay):
         # TODO
         for a in honeypot_accounts:
             try:
-                match = canaries.where(models.Canary.email == a.email)
+                match = models.Canary.get(models.Canary.email == a.email)
             except peewee.DoesNotExist:
                 logger.info('Removing %s' % a.email)
                 try:
