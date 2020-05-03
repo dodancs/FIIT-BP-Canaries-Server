@@ -375,6 +375,28 @@ def sync(sc, delay):
             except:
                 raise
 
+        logger.info('Setting up virtual domain folders...')
+        uid = os.stat('/var/mail/').st_uid
+        gid = os.stat('/var/mail/').st_gid
+
+        try:
+            if not os.path.exists('/var/mail/vhosts/') or not os.path.isdir('/var/mail/vhosts/'):
+                logger.debug('Creating vhosts folder...')
+                os.makedirs('/var/mail/vhosts/', mode=0o770, exist_ok=True)
+                os.chown('/var/mail/vhosts/', uid, gid)
+
+            for domain in domains:
+                path = '/var/mail/vhosts/%s' % domain.domain
+                if not os.path.exists(path) or not os.path.isdir(path):
+                    logger.debug('Directory for %s does not exist. Creating...' %
+                                 domain.domain)
+                    os.makedirs(path, mode=0o770, exist_ok=True)
+                    os.chown(path, uid, gid)
+        except Exception as e:
+            logger.warning('An error occured while creating folders!')
+            logger.warning(e)
+            exit(1)
+
         logger.info('Checking for obsolete domains...')
         honeypot_domains = models.VirtualDomain.select()
         for d in honeypot_domains:
