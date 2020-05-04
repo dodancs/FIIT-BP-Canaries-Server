@@ -306,7 +306,7 @@ def setup():
 ##############
 
 
-def daemon(delay):
+def daemon():
     global parser, Config, logger
 
     # Open configuration file
@@ -327,7 +327,7 @@ def daemon(delay):
 
     # setup scheduler
     s = sched.scheduler(time.time, time.sleep)
-    sync(s, delay)
+    sync(s, Config['sync_interval'])
     s.run()
 
 
@@ -510,10 +510,7 @@ if '-s' in sys.argv:
 
 # if the option to start the sync service as daemon was called
 elif '-d' in sys.argv:
-    delay = 60
-    if len(sys.argv) > 2 and sys.argv[2].isnumeric():
-        delay = int(sys.argv[2])
-    daemon(delay)
+    daemon()
 
 # unsupported option
 else:

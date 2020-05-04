@@ -502,11 +502,14 @@ Open the `config.json` file in your favourite editor and change the settings to 
     "db_db": "database",
     "db_charset": "utf8mb4"
   },
-  "maildir": "/var/mail/vhosts/"
+  "maildir": "/var/mail/vhosts/",
+  "sync_interval": 60
 }
 ```
 
 There are two database configurations. The first one called `canary` is the database for Canary Backend. The second one (`mail`) is for the Canary Server.
+
+The path to the virtual mail directories can also be specified here with the `maildir` setting. The last parameter `sync_interval` specifies how often should the server synchronize it's settings from the back-end.
 
 Now, you need to install all the required Python packages. **If you want to use a virtual environment for this code, run the code below.** Otherwise only install the required packages to your whole system with `pip3 install -r ./requirements.txt`.
 

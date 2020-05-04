@@ -15,5 +15,6 @@
         "db_db": "database",
         "db_charset": "utf8mb4"
     },
-    "maildir": "/var/mail/vhosts/"
+    "maildir": "/var/mail/vhosts/",
+    "sync_interval": 60
 }
