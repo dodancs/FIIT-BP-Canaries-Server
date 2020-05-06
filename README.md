@@ -339,8 +339,6 @@ disable_plaintext_auth = no
 ...
 auth_mechanisms = plain login
 ...
-!include auth-system.conf.ext
-...
 !include auth-sql.conf.ext
 ...
 ```
@@ -428,7 +426,7 @@ Update the SSL configuration file `/etc/dovecot/conf.d/10-ssl.conf`. Add SSLv3 s
 ```ini
 ...
 # SSL/TLS support: yes, no, required. <doc/wiki/SSL.txt>
-ssl = required
+ssl = yes
 ...
 ssl_cert = <[SSL CERTIFICATE PATH]
 ssl_key = <[SSL CERTIFICATE KEY PATH]
@@ -454,9 +452,16 @@ If the firewall configuration from previous steps is used, be sure to add rules 
 ```bash
 ~$ sudo iptables -I INPUT -i [INTERFACE] -p tcp -m tcp --dport 25 -j ACCEPT
 ~$ sudo iptables -I INPUT -i [INTERFACE] -p tcp -m tcp --dport 465 -j ACCEPT
+~$ sudo iptables -I INPUT -i [INTERFACE] -p tcp -m tcp --dport 587 -j ACCEPT
 ~$ sudo iptables -I INPUT -i [INTERFACE] -p tcp -m tcp --dport 143 -j ACCEPT
 ~$ sudo iptables -I INPUT -i [INTERFACE] -p tcp -m tcp --dport 993 -j ACCEPT
 ```
+
+### *Note on setting up SSL certificates*
+
+To enable SSL with either SMTP(S) or IMAP(S) as specified above, you need to generate a certificate. This certificate should be globally valid, and not only a local self-signed certificate - this is also an option, but the connecting clients need to accept this certificate, because it will be not trusted.
+
+A great option for creating SSL certificates is the popular company behind enabling HTTPS for the whole world for free - Let's Encrypt. Let's Encrypt provides an API witch which you can create SSL certificates for free. This option also allows creating wildcard certificates, which would greatly benefit in this application as multiple canary domains will be assigned to the same honeypot server.
 
 ### <a name="sync-service"></a>Setting up sync service
 
